@@ -1,31 +1,47 @@
 "use client";
 
 import { Moon, Sun } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useSyncExternalStore } from "react";
 
 import { THEME_STORAGE_KEY, type Theme } from "./theme-script";
 
-export function ThemeToggleButton() {
-  const [theme, setTheme] = useState<Theme>("light");
+const listeners = new Set<() => void>();
 
-  useEffect(() => {
-    const stored = window.localStorage.getItem(THEME_STORAGE_KEY);
-    if (stored === "light" || stored === "dark") {
-      setTheme(stored);
-    } else {
-      setTheme(
-        window.matchMedia("(prefers-color-scheme: dark)").matches
-          ? "dark"
-          : "light",
-      );
-    }
-  }, []);
+function getSnapshot(): Theme {
+  const explicit = document.documentElement.getAttribute("data-theme");
+  if (explicit === "light" || explicit === "dark") return explicit;
+  return window.matchMedia("(prefers-color-scheme: dark)").matches
+    ? "dark"
+    : "light";
+}
+
+function getServerSnapshot(): Theme {
+  return "light";
+}
+
+function subscribe(callback: () => void) {
+  const media = window.matchMedia("(prefers-color-scheme: dark)");
+  listeners.add(callback);
+  window.addEventListener("storage", callback);
+  media.addEventListener("change", callback);
+  return () => {
+    listeners.delete(callback);
+    window.removeEventListener("storage", callback);
+    media.removeEventListener("change", callback);
+  };
+}
+
+function setTheme(next: Theme) {
+  document.documentElement.setAttribute("data-theme", next);
+  window.localStorage.setItem(THEME_STORAGE_KEY, next);
+  listeners.forEach((listener) => listener());
+}
+
+export function ThemeToggleButton() {
+  const theme = useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);
 
   function handleToggle() {
-    const next: Theme = theme === "dark" ? "light" : "dark";
-    setTheme(next);
-    document.documentElement.setAttribute("data-theme", next);
-    window.localStorage.setItem(THEME_STORAGE_KEY, next);
+    setTheme(theme === "dark" ? "light" : "dark");
   }
 
   const isDark = theme === "dark";

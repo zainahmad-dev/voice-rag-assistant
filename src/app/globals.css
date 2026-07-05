@@ -1,26 +1,131 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  /* Light mode (default) — reading room */
+  --background: #faf6ee;
+  --surface: #ffffff;
+  --surface-raised: #fdfbf6;
+  --border: #e6dfd0;
+  --foreground: #16211f;
+  --foreground-muted: #6e6659;
+  --accent: #0e3b3c;
+  --accent-hover: #0a2c2d;
+  --accent-subtle: #deeae9;
+  --secondary: #b08a4e;
+  --secondary-hover: #96733d;
+  --secondary-subtle: #f1e6d3;
+  --danger: #a1423b;
+
+  /* Animation timing */
+  --ease-standard: cubic-bezier(0.16, 1, 0.3, 1);
+  --duration-fast: 150ms;
+  --duration-base: 240ms;
+  --duration-slow: 400ms;
+  --orb-pulse-duration: 1.8s;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --background: #0d1817;
+    --surface: #132422;
+    --surface-raised: #1b302d;
+    --border: #243936;
+    --foreground: #f3eee2;
+    --foreground-muted: #9ca39b;
+    --accent: #4fb8b4;
+    --accent-hover: #6ecac6;
+    --accent-subtle: #1d3634;
+    --secondary: #d9ae68;
+    --secondary-hover: #e6c286;
+    --secondary-subtle: #332a19;
+    --danger: #d9756c;
+  }
+}
+
+:root[data-theme="dark"] {
+  --background: #0d1817;
+  --surface: #132422;
+  --surface-raised: #1b302d;
+  --border: #243936;
+  --foreground: #f3eee2;
+  --foreground-muted: #9ca39b;
+  --accent: #4fb8b4;
+  --accent-hover: #6ecac6;
+  --accent-subtle: #1d3634;
+  --secondary: #d9ae68;
+  --secondary-hover: #e6c286;
+  --secondary-subtle: #332a19;
+  --danger: #d9756c;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --duration-fast: 1ms;
+    --duration-base: 1ms;
+    --duration-slow: 1ms;
+  }
 }
 
 @theme inline {
   --color-background: var(--background);
+  --color-surface: var(--surface);
+  --color-surface-raised: var(--surface-raised);
+  --color-border: var(--border);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
+  --color-foreground-muted: var(--foreground-muted);
+  --color-accent: var(--accent);
+  --color-accent-hover: var(--accent-hover);
+  --color-accent-subtle: var(--accent-subtle);
+  --color-secondary: var(--secondary);
+  --color-secondary-hover: var(--secondary-hover);
+  --color-secondary-subtle: var(--secondary-subtle);
+  --color-danger: var(--danger);
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+  --font-display: var(--font-space-grotesk);
+  --font-sans: var(--font-inter);
+  --font-mono: var(--font-jetbrains-mono);
+
+  --radius-sm: 6px;
+  --radius-md: 12px;
+  --radius-lg: 20px;
+  --radius-full: 9999px;
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-sans);
+  transition: background-color var(--duration-base) var(--ease-standard),
+    color var(--duration-base) var(--ease-standard);
+}
+
+/* Listening orb pulse */
+@keyframes orb-pulse {
+  from {
+    transform: scale(1);
+    opacity: 0.7;
+  }
+  to {
+    transform: scale(1.08);
+    opacity: 1;
+  }
+}
+
+@keyframes orb-pulse-reduced {
+  from {
+    opacity: 0.85;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.orb-pulse {
+  animation: orb-pulse var(--orb-pulse-duration) ease-in-out infinite alternate;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .orb-pulse {
+    animation-name: orb-pulse-reduced;
+  }
 }

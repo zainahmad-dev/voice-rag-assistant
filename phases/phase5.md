@@ -1,0 +1,3 @@
+# Phase 5 — Write and run the Supabase SQL schema
+
+Write the complete SQL schema for this project's Supabase database: enable the pgvector extension, create a `documents` table (id, file_name, file_type, storage_path, status, error_message, chunk_count, created_at), create a `document_chunks` table (id, document_id foreign key, chunk_index, content, a 768-dimension vector column for Gemini embeddings, created_at), add an IVFFlat cosine-similarity index on the embedding column, and create a `match_documents` Postgres function that takes a query embedding, a match count, and an optional list of document ids, and returns the most similar chunks with a similarity score. Save this as a single schema.sql file and explain how to run it in the Supabase SQL editor.

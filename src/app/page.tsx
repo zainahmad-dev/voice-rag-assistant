@@ -1,6 +1,7 @@
 import { DashboardHeader } from "@/components/layout/DashboardHeader";
 import { DocumentLibrary } from "@/components/documents/DocumentLibrary";
 import { UploadDropzone } from "@/components/upload/UploadDropzone";
+import { VoiceOrb } from "@/components/voice/VoiceOrb";
 
 const MOCK_DOCUMENT_COUNT = 3;
 
@@ -15,7 +16,9 @@ export default function Home() {
           <DocumentLibrary />
         </aside>
 
-        <main className="flex-1 rounded-lg border border-dashed border-border bg-surface" />
+        <main className="flex flex-1 flex-col items-center justify-center gap-4 rounded-lg border border-border bg-surface p-6">
+          <VoiceOrb state="idle" />
+        </main>
       </div>
     </div>
   );

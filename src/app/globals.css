@@ -22,6 +22,7 @@
   --duration-base: 240ms;
   --duration-slow: 400ms;
   --orb-pulse-duration: 1.8s;
+  --orb-speaking-duration: 0.9s;
 }
 
 @media (prefers-color-scheme: dark) {

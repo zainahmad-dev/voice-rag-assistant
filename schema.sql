@@ -1,0 +1,84 @@
+-- Voice-Enabled RAG Document Assistant — Supabase schema
+-- Run this once in the Supabase SQL editor (see instructions at the bottom of this file).
+
+-- 1. Enable the pgvector extension (needed for the `vector` column type and similarity search).
+create extension if not exists vector;
+
+-- 2. Documents table — one row per uploaded file.
+create table if not exists documents (
+  id uuid primary key default gen_random_uuid(),
+  file_name text not null,
+  file_type text not null,
+  storage_path text not null,
+  status text not null default 'pending'
+    check (status in ('pending', 'processing', 'completed', 'failed')),
+  error_message text,
+  chunk_count integer not null default 0,
+  created_at timestamptz not null default now()
+);
+
+-- 3. Document chunks table — one row per embedded chunk of a document.
+create table if not exists document_chunks (
+  id uuid primary key default gen_random_uuid(),
+  document_id uuid not null references documents (id) on delete cascade,
+  chunk_index integer not null,
+  content text not null,
+  embedding vector(768), -- 768 dimensions matches Google's Gemini text-embedding-004
+  created_at timestamptz not null default now()
+);
+
+-- 4. IVFFlat index for fast approximate cosine-similarity search over embeddings.
+-- `lists = 100` is a reasonable default for small-to-medium corpora; re-tune (roughly
+-- sqrt(row_count)) and REINDEX once you have a real volume of chunks.
+create index if not exists document_chunks_embedding_idx
+  on document_chunks
+  using ivfflat (embedding vector_cosine_ops)
+  with (lists = 100);
+
+create index if not exists document_chunks_document_id_idx
+  on document_chunks (document_id);
+
+-- 5. match_documents — similarity search RPC used by the query API route.
+-- `filter_document_ids` is optional: pass null (or omit it) to search across all documents,
+-- or an array of document ids to restrict the search to a subset.
+create or replace function match_documents (
+  query_embedding vector(768),
+  match_count int default 5,
+  filter_document_ids uuid[] default null
+)
+returns table (
+  id uuid,
+  document_id uuid,
+  content text,
+  chunk_index int,
+  similarity float
+)
+language plpgsql
+as $$
+begin
+  return query
+  select
+    document_chunks.id,
+    document_chunks.document_id,
+    document_chunks.content,
+    document_chunks.chunk_index,
+    1 - (document_chunks.embedding <=> query_embedding) as similarity
+  from document_chunks
+  where filter_document_ids is null
+     or document_chunks.document_id = any (filter_document_ids)
+  order by document_chunks.embedding <=> query_embedding
+  limit match_count;
+end;
+$$;
+
+-- ---------------------------------------------------------------------------
+-- How to run this in Supabase
+-- ---------------------------------------------------------------------------
+-- 1. Open your project at https://supabase.com/dashboard.
+-- 2. In the left sidebar, click "SQL Editor" → "New query".
+-- 3. Paste the entire contents of this file into the editor.
+-- 4. Click "Run" (or press Ctrl/Cmd + Enter).
+-- 5. Check the "Table Editor" to confirm `documents` and `document_chunks` now exist,
+--    and check "Database" → "Functions" to confirm `match_documents` was created.
+-- You can re-run this file safely later — every statement uses `if not exists`
+-- or `or replace`, so it won't error out on objects that already exist.

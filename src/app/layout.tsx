@@ -1,5 +1,8 @@
 import type { Metadata } from "next";
 import { Space_Grotesk, Inter, JetBrains_Mono } from "next/font/google";
+import Script from "next/script";
+
+import { themeInitScript } from "@/components/layout/theme-script";
 import "./globals.css";
 
 const spaceGrotesk = Space_Grotesk({
@@ -34,12 +37,16 @@ export default function RootLayout({
     <html
       lang="en"
       className={`${spaceGrotesk.variable} ${inter.variable} ${jetbrainsMono.variable} h-full antialiased`}
+      suppressHydrationWarning
     >
       <body
         className="min-h-full flex flex-col"
         suppressHydrationWarning
       >
         {children}
+        <Script id="theme-init" strategy="beforeInteractive">
+          {themeInitScript}
+        </Script>
       </body>
     </html>
   );

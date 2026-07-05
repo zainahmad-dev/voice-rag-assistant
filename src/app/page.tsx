@@ -1,3 +1,4 @@
+import { ConversationHistory } from "@/components/chat/ConversationHistory";
 import { DashboardHeader } from "@/components/layout/DashboardHeader";
 import { DocumentLibrary } from "@/components/documents/DocumentLibrary";
 import { UploadDropzone } from "@/components/upload/UploadDropzone";
@@ -16,8 +17,14 @@ export default function Home() {
           <DocumentLibrary />
         </aside>
 
-        <main className="flex flex-1 flex-col items-center justify-center gap-4 rounded-lg border border-border bg-surface p-6">
-          <VoiceOrb state="idle" />
+        <main className="flex flex-1 flex-col rounded-lg border border-border bg-surface p-6">
+          <div className="flex-1 overflow-y-auto">
+            <ConversationHistory />
+          </div>
+
+          <div className="flex justify-center pt-6">
+            <VoiceOrb state="idle" />
+          </div>
         </main>
       </div>
     </div>

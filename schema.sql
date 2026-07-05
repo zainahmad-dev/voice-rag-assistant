@@ -71,6 +71,33 @@ begin
 end;
 $$;
 
+-- 6. Storage bucket for the original uploaded files. Private (`public = false`) —
+-- files are only readable via the service role key (server-side) or a signed URL.
+insert into storage.buckets (id, name, public)
+values ('documents', 'documents', false)
+on conflict (id) do nothing;
+
+-- 7. Row Level Security — permissive policies suitable for this single-tenant demo.
+-- Every request (anon or authenticated) is treated as the one trusted user, so
+-- each policy simply allows every operation. Tighten these if the app ever
+-- becomes multi-tenant.
+alter table documents enable row level security;
+alter table document_chunks enable row level security;
+
+drop policy if exists "Allow all access to documents" on documents;
+create policy "Allow all access to documents"
+  on documents
+  for all
+  using (true)
+  with check (true);
+
+drop policy if exists "Allow all access to document_chunks" on document_chunks;
+create policy "Allow all access to document_chunks"
+  on document_chunks
+  for all
+  using (true)
+  with check (true);
+
 -- ---------------------------------------------------------------------------
 -- How to run this in Supabase
 -- ---------------------------------------------------------------------------
@@ -79,6 +106,13 @@ $$;
 -- 3. Paste the entire contents of this file into the editor.
 -- 4. Click "Run" (or press Ctrl/Cmd + Enter).
 -- 5. Check the "Table Editor" to confirm `documents` and `document_chunks` now exist,
---    and check "Database" → "Functions" to confirm `match_documents` was created.
--- You can re-run this file safely later — every statement uses `if not exists`
--- or `or replace`, so it won't error out on objects that already exist.
+--    check "Database" → "Functions" to confirm `match_documents` was created, and
+--    check "Storage" to confirm the private `documents` bucket was created.
+-- You can re-run this file safely later — every statement uses `if not exists`,
+-- `or replace`, `on conflict do nothing`, or `drop ... if exists` first, so it
+-- won't error out on objects that already exist.
+--
+-- Note on RLS vs. Storage: this app's API routes use the Supabase service role
+-- key server-side, which bypasses RLS and storage permissions entirely. The
+-- policies above only matter if/when a client component queries `documents` or
+-- `document_chunks` directly using the anon key (e.g. for a live document list).

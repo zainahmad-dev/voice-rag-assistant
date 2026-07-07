@@ -1,9 +1,23 @@
 import mammoth from "mammoth";
 import { PDFParse } from "pdf-parse";
+import { WorkerMessageHandler } from "pdfjs-dist/legacy/build/pdf.worker.mjs";
 
 import type { SupportedFileType } from "@/types/document";
 
+function ensurePdfWorkerMessageHandler(): void {
+  const pdfjsGlobal = globalThis as typeof globalThis & {
+    pdfjsWorker?: {
+      WorkerMessageHandler: typeof WorkerMessageHandler;
+    };
+  };
+
+  if (!pdfjsGlobal.pdfjsWorker) {
+    pdfjsGlobal.pdfjsWorker = { WorkerMessageHandler };
+  }
+}
+
 async function extractPdfText(buffer: Buffer): Promise<string> {
+  ensurePdfWorkerMessageHandler();
   const parser = new PDFParse({ data: buffer });
   try {
     // Default pageJoiner appends a "-- page_number of total_number --" marker

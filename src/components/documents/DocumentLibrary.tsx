@@ -2,49 +2,24 @@
 
 import { CircleCheck, CircleX, FileText, Loader2, Trash2 } from "lucide-react";
 
-type MockDocumentStatus =
-  | { kind: "ready"; chunkCount: number }
-  | { kind: "indexing"; step: number; totalSteps: number }
-  | { kind: "failed" };
+import { useDocuments } from "@/hooks/useDocuments";
+import type { Document } from "@/types/document";
 
-interface MockDocument {
-  id: string;
-  fileName: string;
-  status: MockDocumentStatus;
-}
-
-const MOCK_DOCUMENTS: MockDocument[] = [
-  {
-    id: "1",
-    fileName: "employee-handbook.pdf",
-    status: { kind: "ready", chunkCount: 42 },
-  },
-  {
-    id: "2",
-    fileName: "q3-financial-report.docx",
-    status: { kind: "indexing", step: 2, totalSteps: 4 },
-  },
-  {
-    id: "3",
-    fileName: "meeting-notes.txt",
-    status: { kind: "failed" },
-  },
-];
-
-function StatusBadge({ status }: { status: MockDocumentStatus }) {
-  switch (status.kind) {
-    case "ready":
+function StatusBadge({ status, chunk_count }: Pick<Document, "status" | "chunk_count">) {
+  switch (status) {
+    case "completed":
       return (
         <span className="inline-flex items-center gap-1 whitespace-nowrap rounded-full bg-accent-subtle px-2 py-0.5 text-xs font-medium text-accent">
           <CircleCheck size={12} />
-          Ready · {status.chunkCount} chunks
+          Ready · {chunk_count} chunks
         </span>
       );
-    case "indexing":
+    case "pending":
+    case "processing":
       return (
         <span className="inline-flex items-center gap-1 whitespace-nowrap rounded-full bg-secondary-subtle px-2 py-0.5 text-xs font-medium text-secondary">
           <Loader2 size={12} className="animate-spin" />
-          Indexing · step {status.step} of {status.totalSteps}
+          Indexing…
         </span>
       );
     case "failed":
@@ -57,19 +32,37 @@ function StatusBadge({ status }: { status: MockDocumentStatus }) {
   }
 }
 
-function handleDelete(document: MockDocument) {
-  console.log("Delete document:", document.id, document.fileName);
+function handleDelete(document: Document) {
+  console.log("Delete document:", document.id, document.file_name);
 }
 
 export function DocumentLibrary() {
+  const { documents, isLoading, error } = useDocuments();
+
   return (
     <div className="space-y-3">
       <h2 className="text-xs font-semibold uppercase tracking-wide text-foreground-muted">
         Documents
       </h2>
 
+      {error && (
+        <p className="rounded-lg bg-danger/10 px-3 py-2 text-xs text-danger">
+          {error}
+        </p>
+      )}
+
+      {isLoading && documents.length === 0 && !error && (
+        <p className="text-sm text-foreground-muted">Loading documents…</p>
+      )}
+
+      {!isLoading && documents.length === 0 && !error && (
+        <p className="text-sm text-foreground-muted">
+          No documents yet. Upload one to get started.
+        </p>
+      )}
+
       <ul className="space-y-2">
-        {MOCK_DOCUMENTS.map((document) => (
+        {documents.map((document) => (
           <li
             key={document.id}
             className="flex items-center justify-between gap-3 rounded-lg border border-border bg-surface-raised p-3"
@@ -77,15 +70,15 @@ export function DocumentLibrary() {
             <div className="flex min-w-0 items-center gap-2">
               <FileText size={16} className="shrink-0 text-foreground-muted" />
               <span className="truncate text-sm text-foreground">
-                {document.fileName}
+                {document.file_name}
               </span>
             </div>
 
             <div className="flex shrink-0 items-center gap-2">
-              <StatusBadge status={document.status} />
+              <StatusBadge status={document.status} chunk_count={document.chunk_count} />
               <button
                 type="button"
-                aria-label={`Delete ${document.fileName}`}
+                aria-label={`Delete ${document.file_name}`}
                 onClick={() => handleDelete(document)}
                 className="flex h-7 w-7 items-center justify-center rounded-full text-foreground-muted transition-colors duration-150 hover:bg-danger/10 hover:text-danger"
               >

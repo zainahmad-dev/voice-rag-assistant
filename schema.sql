@@ -98,6 +98,14 @@ create policy "Allow all access to document_chunks"
   using (true)
   with check (true);
 
+-- 8. Grants — this project's default privileges only cover REFERENCES/TRIGGER/TRUNCATE for
+-- anon/authenticated/service_role, not the DML privileges PostgREST needs. RLS policies only
+-- filter rows a role is already allowed to touch, so without these grants every request fails
+-- with "permission denied for table ..." regardless of the policies above.
+grant select, insert, update, delete on documents to anon, authenticated, service_role;
+grant select, insert, update, delete on document_chunks to anon, authenticated, service_role;
+grant execute on function match_documents(vector, int, uuid[]) to anon, authenticated, service_role;
+
 -- ---------------------------------------------------------------------------
 -- How to run this in Supabase
 -- ---------------------------------------------------------------------------
@@ -112,7 +120,9 @@ create policy "Allow all access to document_chunks"
 -- `or replace`, `on conflict do nothing`, or `drop ... if exists` first, so it
 -- won't error out on objects that already exist.
 --
--- Note on RLS vs. Storage: this app's API routes use the Supabase service role
--- key server-side, which bypasses RLS and storage permissions entirely. The
--- policies above only matter if/when a client component queries `documents` or
--- `document_chunks` directly using the anon key (e.g. for a live document list).
+-- Note on RLS vs. grants: the service role key bypasses RLS policies, but it does NOT
+-- bypass base table grants — those are a separate privilege layer that PostgREST checks
+-- first. Both the service role (used server-side by this app's API routes) and the anon
+-- key (used if a client component ever queries these tables directly) need the explicit
+-- grants in step 8 above; without them every request fails with "permission denied for
+-- table ..." even though the RLS policies would otherwise allow it.

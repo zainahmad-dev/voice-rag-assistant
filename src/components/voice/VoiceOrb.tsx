@@ -2,9 +2,7 @@
 
 import { Mic } from "lucide-react";
 
-import { useVapiCall } from "@/hooks/useVapiCall";
-
-export type VoiceOrbState = "idle" | "listening" | "speaking";
+import { useVapiCall, type VoiceOrbState } from "@/hooks/useVapiCall";
 
 const STATUS_LABEL: Record<VoiceOrbState, string> = {
   idle: "Tap to speak",
@@ -25,8 +23,7 @@ const BUTTON_COLOR: Record<VoiceOrbState, string> = {
 };
 
 export function VoiceOrb() {
-  const { isCallActive, toggleCall } = useVapiCall();
-  const state = (isCallActive ? "listening" : "idle") as VoiceOrbState;
+  const { state, error, toggleCall } = useVapiCall();
   const isActive = state !== "idle";
 
   return (
@@ -61,6 +58,12 @@ export function VoiceOrb() {
       <span className="text-sm text-foreground-muted">
         {STATUS_LABEL[state]}
       </span>
+
+      {error && (
+        <span role="alert" className="max-w-64 text-center text-xs text-danger">
+          {error}
+        </span>
+      )}
     </div>
   );
 }

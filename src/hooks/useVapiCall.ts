@@ -6,8 +6,11 @@ import Vapi from "@vapi-ai/web";
 
 import { assistantConfig } from "@/lib/vapi/assistant";
 
+export type VoiceOrbState = "idle" | "listening" | "speaking";
+
 interface UseVapiCallResult {
-  isCallActive: boolean;
+  state: VoiceOrbState;
+  error: string | null;
   toggleCall: () => void;
 }
 
@@ -38,22 +41,36 @@ function patchDailyNoiseCancellation() {
   isDailyCreateCallObjectPatched = true;
 }
 
+function extractErrorMessage(error: unknown): string {
+  if (error && typeof error === "object") {
+    const nested = (error as { error?: { message?: string } }).error?.message;
+    const direct = (error as { message?: string }).message;
+    if (nested) return nested;
+    if (direct) return direct;
+  }
+
+  return "The voice call ran into a problem. Please try again.";
+}
+
 /**
  * Owns the VAPI Web SDK client and starts/stops a call with our inline
  * assistant config each time it's toggled. The client is created lazily, on
  * the first toggle, so it's only ever constructed from a user gesture (a
  * click) rather than during render.
  *
- * Listens for `call-end`/`error` just enough to reset `isCallActive` if VAPI
- * tears the call down on its own — otherwise the orb would stay stuck
- * showing "Listening…" after a failed or dropped call. Full state (speaking,
- * user-visible error messages) comes in a later phase.
+ * `state` mirrors VAPI's own call lifecycle events rather than just whether a
+ * call is active: `call-start` (VAPI signals it's ready and listening) maps
+ * to "listening", `speech-start`/`speech-end` (the assistant's own audio
+ * level crossing a threshold) toggle "speaking" back to "listening", and
+ * `call-end` or `error` reset to "idle". `error` surfaces the last call
+ * error so the UI can show it instead of silently going quiet.
  */
 export function useVapiCall(): UseVapiCallResult {
   const vapiRef = useRef<Vapi | null>(null);
   const isStartingRef = useRef(false);
   const stopRequestedWhileStartingRef = useRef(false);
-  const [isCallActive, setIsCallActive] = useState(false);
+  const [state, setState] = useState<VoiceOrbState>("idle");
+  const [error, setError] = useState<string | null>(null);
 
   const getClient = useCallback(() => {
     if (vapiRef.current) return vapiRef.current;
@@ -66,10 +83,22 @@ export function useVapiCall(): UseVapiCallResult {
     }
 
     const vapi = new Vapi(publicKey);
-    vapi.on("call-end", () => setIsCallActive(false));
-    vapi.on("error", (error) => {
-      console.error("VAPI call error:", error);
-      setIsCallActive(false);
+
+    vapi.on("call-start", () => {
+      setError(null);
+      setState("listening");
+    });
+
+    vapi.on("speech-start", () => setState("speaking"));
+
+    vapi.on("speech-end", () => setState("listening"));
+
+    vapi.on("call-end", () => setState("idle"));
+
+    vapi.on("error", (callError) => {
+      console.error("VAPI call error:", callError);
+      setError(extractErrorMessage(callError));
+      setState("idle");
     });
 
     vapiRef.current = vapi;
@@ -84,33 +113,40 @@ export function useVapiCall(): UseVapiCallResult {
       return;
     }
 
-    if (isCallActive) {
+    if (state !== "idle") {
       vapi.stop();
-      setIsCallActive(false);
+      setState("idle");
     } else {
       isStartingRef.current = true;
       stopRequestedWhileStartingRef.current = false;
+      setError(null);
 
       vapi
         .start(assistantConfig)
-        .then(() => {
+        .then((call) => {
           if (stopRequestedWhileStartingRef.current) {
             vapi.stop();
+            setState("idle");
             return;
           }
 
-          setIsCallActive(true);
+          if (!call) {
+            setState("idle");
+          }
+          // Otherwise the `call-start` event flips us to "listening" once
+          // VAPI confirms it's actually ready, rather than assuming so here.
         })
-        .catch((error: unknown) => {
-          console.error("VAPI failed to start call:", error);
-          setIsCallActive(false);
+        .catch((startError: unknown) => {
+          console.error("VAPI failed to start call:", startError);
+          setError(extractErrorMessage(startError));
+          setState("idle");
         })
         .finally(() => {
           isStartingRef.current = false;
           stopRequestedWhileStartingRef.current = false;
         });
     }
-  }, [getClient, isCallActive]);
+  }, [getClient, state]);
 
-  return { isCallActive, toggleCall };
+  return { state, error, toggleCall };
 }

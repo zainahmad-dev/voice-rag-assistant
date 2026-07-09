@@ -23,7 +23,7 @@ export default function Home() {
           </div>
 
           <div className="flex justify-center pt-6">
-            <VoiceOrb state="idle" />
+            <VoiceOrb />
           </div>
         </main>
       </div>

@@ -2,11 +2,9 @@
 
 import { Mic } from "lucide-react";
 
-export type VoiceOrbState = "idle" | "listening" | "speaking";
+import { useVapiCall } from "@/hooks/useVapiCall";
 
-interface VoiceOrbProps {
-  state?: VoiceOrbState;
-}
+export type VoiceOrbState = "idle" | "listening" | "speaking";
 
 const STATUS_LABEL: Record<VoiceOrbState, string> = {
   idle: "Tap to speak",
@@ -26,7 +24,9 @@ const BUTTON_COLOR: Record<VoiceOrbState, string> = {
   speaking: "border-secondary bg-secondary text-background",
 };
 
-export function VoiceOrb({ state = "idle" }: VoiceOrbProps) {
+export function VoiceOrb() {
+  const { isCallActive, toggleCall } = useVapiCall();
+  const state = (isCallActive ? "listening" : "idle") as VoiceOrbState;
   const isActive = state !== "idle";
 
   return (
@@ -46,6 +46,7 @@ export function VoiceOrb({ state = "idle" }: VoiceOrbProps) {
 
         <button
           type="button"
+          onClick={toggleCall}
           aria-label={
             state === "idle"
               ? "Start voice conversation"

@@ -2,8 +2,13 @@
 
 import { CircleCheck, CircleX, FileText, Loader2, Trash2 } from "lucide-react";
 
-import { useDocuments } from "@/hooks/useDocuments";
 import type { Document } from "@/types/document";
+
+interface DocumentLibraryProps {
+  documents: Document[];
+  isLoading: boolean;
+  error: string | null;
+}
 
 function StatusBadge({ status, chunk_count }: Pick<Document, "status" | "chunk_count">) {
   switch (status) {
@@ -36,9 +41,7 @@ function handleDelete(document: Document) {
   console.log("Delete document:", document.id, document.file_name);
 }
 
-export function DocumentLibrary() {
-  const { documents, isLoading, error } = useDocuments();
-
+export function DocumentLibrary({ documents, isLoading, error }: DocumentLibraryProps) {
   return (
     <div className="space-y-3">
       <h2 className="text-xs font-semibold uppercase tracking-wide text-foreground-muted">

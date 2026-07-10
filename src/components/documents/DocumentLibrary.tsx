@@ -68,26 +68,37 @@ export function DocumentLibrary({ documents, isLoading, error }: DocumentLibrary
         {documents.map((document) => (
           <li
             key={document.id}
-            className="flex items-center justify-between gap-3 rounded-lg border border-border bg-surface-raised p-3"
+            className="rounded-lg border border-border bg-surface-raised p-3"
           >
-            <div className="flex min-w-0 items-center gap-2">
-              <FileText size={16} className="shrink-0 text-foreground-muted" />
-              <span className="truncate text-sm text-foreground">
-                {document.file_name}
-              </span>
+            <div className="flex items-center justify-between gap-3">
+              <div className="flex min-w-0 items-center gap-2">
+                <FileText size={16} className="shrink-0 text-foreground-muted" />
+                <span className="truncate text-sm text-foreground">
+                  {document.file_name}
+                </span>
+              </div>
+
+              <div className="flex shrink-0 items-center gap-2">
+                <StatusBadge status={document.status} chunk_count={document.chunk_count} />
+                <button
+                  type="button"
+                  aria-label={`Delete ${document.file_name}`}
+                  onClick={() => handleDelete(document)}
+                  className="flex h-7 w-7 items-center justify-center rounded-full text-foreground-muted transition-colors duration-150 hover:bg-danger/10 hover:text-danger"
+                >
+                  <Trash2 size={14} />
+                </button>
+              </div>
             </div>
 
-            <div className="flex shrink-0 items-center gap-2">
-              <StatusBadge status={document.status} chunk_count={document.chunk_count} />
-              <button
-                type="button"
-                aria-label={`Delete ${document.file_name}`}
-                onClick={() => handleDelete(document)}
-                className="flex h-7 w-7 items-center justify-center rounded-full text-foreground-muted transition-colors duration-150 hover:bg-danger/10 hover:text-danger"
+            {document.status === "failed" && document.error_message && (
+              <p
+                className="mt-1.5 truncate text-xs text-danger/80"
+                title={document.error_message}
               >
-                <Trash2 size={14} />
-              </button>
-            </div>
+                {document.error_message}
+              </p>
+            )}
           </li>
         ))}
       </ul>

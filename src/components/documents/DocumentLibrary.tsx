@@ -1,6 +1,7 @@
 "use client";
 
 import { CircleCheck, CircleX, FileText, Loader2, Trash2 } from "lucide-react";
+import { useState } from "react";
 
 import type { Document } from "@/types/document";
 
@@ -8,6 +9,7 @@ interface DocumentLibraryProps {
   documents: Document[];
   isLoading: boolean;
   error: string | null;
+  deleteDocument: (id: string) => Promise<void>;
 }
 
 function StatusBadge({ status, chunk_count }: Pick<Document, "status" | "chunk_count">) {
@@ -37,11 +39,34 @@ function StatusBadge({ status, chunk_count }: Pick<Document, "status" | "chunk_c
   }
 }
 
-function handleDelete(document: Document) {
-  console.log("Delete document:", document.id, document.file_name);
-}
+export function DocumentLibrary({ documents, isLoading, error, deleteDocument }: DocumentLibraryProps) {
+  const [deletingIds, setDeletingIds] = useState<Set<string>>(new Set());
+  const [deleteErrors, setDeleteErrors] = useState<Record<string, string>>({});
 
-export function DocumentLibrary({ documents, isLoading, error }: DocumentLibraryProps) {
+  async function handleDelete(document: Document) {
+    setDeletingIds((prev) => new Set(prev).add(document.id));
+    setDeleteErrors((prev) => {
+      if (!(document.id in prev)) return prev;
+      const next = { ...prev };
+      delete next[document.id];
+      return next;
+    });
+
+    try {
+      await deleteDocument(document.id);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Failed to delete this document.";
+      setDeleteErrors((prev) => ({ ...prev, [document.id]: message }));
+    } finally {
+      setDeletingIds((prev) => {
+        if (!prev.has(document.id)) return prev;
+        const next = new Set(prev);
+        next.delete(document.id);
+        return next;
+      });
+    }
+  }
+
   return (
     <div className="space-y-3">
       <h2 className="text-xs font-semibold uppercase tracking-wide text-foreground-muted">
@@ -83,10 +108,15 @@ export function DocumentLibrary({ documents, isLoading, error }: DocumentLibrary
                 <button
                   type="button"
                   aria-label={`Delete ${document.file_name}`}
+                  disabled={deletingIds.has(document.id)}
                   onClick={() => handleDelete(document)}
-                  className="flex h-7 w-7 items-center justify-center rounded-full text-foreground-muted transition-colors duration-150 hover:bg-danger/10 hover:text-danger"
+                  className="flex h-7 w-7 items-center justify-center rounded-full text-foreground-muted transition-colors duration-150 hover:bg-danger/10 hover:text-danger disabled:pointer-events-none disabled:opacity-50"
                 >
-                  <Trash2 size={14} />
+                  {deletingIds.has(document.id) ? (
+                    <Loader2 size={14} className="animate-spin" />
+                  ) : (
+                    <Trash2 size={14} />
+                  )}
                 </button>
               </div>
             </div>
@@ -97,6 +127,15 @@ export function DocumentLibrary({ documents, isLoading, error }: DocumentLibrary
                 title={document.error_message}
               >
                 {document.error_message}
+              </p>
+            )}
+
+            {deleteErrors[document.id] && (
+              <p
+                className="mt-1.5 truncate text-xs text-danger/80"
+                title={deleteErrors[document.id]}
+              >
+                {deleteErrors[document.id]}
               </p>
             )}
           </li>

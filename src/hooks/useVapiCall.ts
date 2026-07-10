@@ -41,12 +41,27 @@ function patchDailyNoiseCancellation() {
   isDailyCreateCallObjectPatched = true;
 }
 
+const MIC_PERMISSION_MESSAGE =
+  "Microphone access was denied. Please allow microphone access in your browser's site settings and try again.";
+
 function extractErrorMessage(error: unknown): string {
+  if (error instanceof DOMException && error.name === "NotAllowedError") {
+    return MIC_PERMISSION_MESSAGE;
+  }
+
   if (error && typeof error === "object") {
     const nested = (error as { error?: { message?: string } }).error?.message;
     const direct = (error as { message?: string }).message;
-    if (nested) return nested;
-    if (direct) return direct;
+    const message = nested || direct;
+
+    if (message) {
+      // Covers the mic-permission case even when it arrives wrapped inside
+      // VAPI/Daily's own error shape instead of as a raw DOMException.
+      if (/permission|not allowed/i.test(message)) {
+        return MIC_PERMISSION_MESSAGE;
+      }
+      return message;
+    }
   }
 
   return "The voice call ran into a problem. Please try again.";

@@ -11,6 +11,7 @@ export interface SearchOptions {
 export interface DocumentChunkMatch {
   id: string;
   document_id: string;
+  document_name: string;
   content: string;
   chunk_index: number;
   similarity: number;
@@ -59,5 +60,30 @@ export async function searchDocuments(
     throw new Error(`Vector search failed: ${error.message}`);
   }
 
-  return (data ?? []) as DocumentChunkMatch[];
+  const matches = (data ?? []) as Omit<DocumentChunkMatch, "document_name">[];
+  if (matches.length === 0) {
+    return [];
+  }
+
+  // match_documents only returns document_id, not the file name, so resolve
+  // names for the (usually small) set of matched documents in one follow-up
+  // query — needed for source attribution in the conversation history.
+  const uniqueDocumentIds = [...new Set(matches.map((match) => match.document_id))];
+  const { data: matchedDocuments, error: namesError } = await supabase
+    .from("documents")
+    .select("id, file_name")
+    .in("id", uniqueDocumentIds);
+
+  if (namesError) {
+    throw new Error(`Failed to resolve matched document names: ${namesError.message}`);
+  }
+
+  const nameById = new Map(
+    (matchedDocuments ?? []).map((document) => [document.id as string, document.file_name as string])
+  );
+
+  return matches.map((match) => ({
+    ...match,
+    document_name: nameById.get(match.document_id) ?? "Unknown document",
+  }));
 }

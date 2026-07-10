@@ -5,6 +5,8 @@ import DailyIframe from "@daily-co/daily-js";
 import Vapi from "@vapi-ai/web";
 
 import { assistantConfig } from "@/lib/vapi/assistant";
+import { extractNewMessages } from "@/lib/vapi/parseConversationUpdate";
+import { useConversationStore, type ConversationSource } from "@/store/conversationStore";
 
 export type VoiceOrbState = "idle" | "listening" | "speaking";
 
@@ -79,6 +81,13 @@ function extractErrorMessage(error: unknown): string {
  * level crossing a threshold) toggle "speaking" back to "listening", and
  * `call-end` or `error` reset to "idle". `error` surfaces the last call
  * error so the UI can show it instead of silently going quiet.
+ *
+ * It also mirrors the call's turns into the shared conversation store (see
+ * src/store/conversationStore.ts) by listening for VAPI's `conversation-update`
+ * messages, so voice turns interleave with any text-based testing queries in
+ * one ordered history. See parseConversationUpdate.ts for why that message
+ * (rather than `transcript`) is the source of truth: it's the only place
+ * source-attribution metadata for a tool call surfaces on the client.
  */
 export function useVapiCall(): UseVapiCallResult {
   const vapiRef = useRef<Vapi | null>(null);
@@ -86,6 +95,10 @@ export function useVapiCall(): UseVapiCallResult {
   const stopRequestedWhileStartingRef = useRef(false);
   const [state, setState] = useState<VoiceOrbState>("idle");
   const [error, setError] = useState<string | null>(null);
+
+  const addMessage = useConversationStore((storeState) => storeState.addMessage);
+  const processedMessageCountRef = useRef(0);
+  const pendingSourcesRef = useRef<ConversationSource[] | undefined>(undefined);
 
   const getClient = useCallback(() => {
     if (vapiRef.current) return vapiRef.current;
@@ -100,6 +113,8 @@ export function useVapiCall(): UseVapiCallResult {
     const vapi = new Vapi(publicKey);
 
     vapi.on("call-start", () => {
+      processedMessageCountRef.current = 0;
+      pendingSourcesRef.current = undefined;
       setError(null);
       setState("listening");
     });
@@ -110,6 +125,23 @@ export function useVapiCall(): UseVapiCallResult {
 
     vapi.on("call-end", () => setState("idle"));
 
+    vapi.on("message", (message: unknown) => {
+      const record = message as { type?: string; messages?: unknown[] } | null;
+      if (!record || record.type !== "conversation-update" || !Array.isArray(record.messages)) {
+        return;
+      }
+
+      const { bubbles, nextIndex, pendingSources } = extractNewMessages(
+        record.messages,
+        processedMessageCountRef.current,
+        pendingSourcesRef.current
+      );
+
+      processedMessageCountRef.current = nextIndex;
+      pendingSourcesRef.current = pendingSources;
+      bubbles.forEach(addMessage);
+    });
+
     vapi.on("error", (callError) => {
       console.error("VAPI call error:", callError);
       setError(extractErrorMessage(callError));
@@ -118,7 +150,7 @@ export function useVapiCall(): UseVapiCallResult {
 
     vapiRef.current = vapi;
     return vapi;
-  }, []);
+  }, [addMessage]);
 
   const toggleCall = useCallback(() => {
     const vapi = getClient();

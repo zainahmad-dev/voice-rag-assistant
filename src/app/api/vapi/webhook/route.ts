@@ -29,8 +29,21 @@ async function runToolCall(toolCall: ToolCall): Promise<ToolCallResult> {
   }
 
   try {
-    const { answer } = await generateAnswer(question);
-    return { name, toolCallId: toolCall.id, result: answer };
+    const { answer, sources } = await generateAnswer(question);
+    return {
+      name,
+      toolCallId: toolCall.id,
+      result: answer,
+      // Sent through to the client as-is (VAPI's ToolCallResult.metadata),
+      // where useVapiCall attaches it to the spoken reply's chat bubble —
+      // see src/lib/vapi/parseConversationUpdate.ts.
+      metadata: {
+        sources: sources.map((source) => ({
+          documentName: source.document_name,
+          similarity: source.similarity,
+        })),
+      },
+    };
   } catch (error) {
     const message = error instanceof Error ? error.message : "Failed to generate an answer.";
     return { name, toolCallId: toolCall.id, error: message };

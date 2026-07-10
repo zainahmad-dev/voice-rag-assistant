@@ -1,46 +1,21 @@
-interface SourceAttribution {
-  documentName: string;
-  similarity: number;
-}
+"use client";
 
-export interface ChatMessage {
-  id: string;
-  role: "user" | "assistant";
-  content: string;
-  sources?: SourceAttribution[];
-}
-
-const MOCK_MESSAGES: ChatMessage[] = [
-  {
-    id: "1",
-    role: "user",
-    content: "What is our policy on remote work?",
-  },
-  {
-    id: "2",
-    role: "assistant",
-    content:
-      "Employees may work remotely up to three days per week, subject to manager approval.",
-    sources: [{ documentName: "employee-handbook.pdf", similarity: 0.91 }],
-  },
-  {
-    id: "3",
-    role: "user",
-    content: "How do I request time off?",
-  },
-  {
-    id: "4",
-    role: "assistant",
-    content:
-      "Submit a time-off request through the HR portal at least two weeks in advance.",
-    sources: [{ documentName: "employee-handbook.pdf", similarity: 0.86 }],
-  },
-];
+import { useConversationStore } from "@/store/conversationStore";
 
 export function ConversationHistory() {
+  const messages = useConversationStore((state) => state.messages);
+
+  if (messages.length === 0) {
+    return (
+      <p className="text-sm text-foreground-muted">
+        Tap the mic and ask a question about your documents, or type one below to test the assistant.
+      </p>
+    );
+  }
+
   return (
     <ul className="flex w-full flex-col gap-4">
-      {MOCK_MESSAGES.map((message) => (
+      {messages.map((message) => (
         <li
           key={message.id}
           className={`flex ${message.role === "user" ? "justify-end" : "justify-start"}`}
@@ -52,9 +27,9 @@ export function ConversationHistory() {
           ) : (
             <div className="max-w-[75%] space-y-2 rounded-2xl border border-border bg-surface px-4 py-3">
               <p className="text-sm text-foreground">{message.content}</p>
-              {message.sources?.map((source) => (
+              {message.sources?.map((source, index) => (
                 <p
-                  key={source.documentName}
+                  key={`${source.documentName}-${index}`}
                   className="text-xs text-foreground-muted"
                 >
                   {source.documentName} · {Math.round(source.similarity * 100)}%

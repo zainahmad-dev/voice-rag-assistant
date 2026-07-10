@@ -1,6 +1,7 @@
 "use client";
 
 import { ConversationHistory } from "@/components/chat/ConversationHistory";
+import { TextQueryInput } from "@/components/chat/TextQueryInput";
 import { DashboardHeader } from "@/components/layout/DashboardHeader";
 import { DocumentLibrary } from "@/components/documents/DocumentLibrary";
 import { UploadDropzone } from "@/components/upload/UploadDropzone";
@@ -31,8 +32,9 @@ export default function Home() {
             <ConversationHistory />
           </div>
 
-          <div className="flex justify-center pt-6">
+          <div className="flex flex-col items-center gap-4 pt-6">
             <VoiceOrb />
+            <TextQueryInput />
           </div>
         </main>
       </div>

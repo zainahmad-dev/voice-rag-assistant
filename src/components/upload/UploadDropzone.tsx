@@ -3,6 +3,7 @@
 import { CircleCheck, CircleX, Loader2, UploadCloud } from "lucide-react";
 import { useRef, useState } from "react";
 
+import { createId } from "@/lib/createId";
 import type { Document } from "@/types/document";
 
 const ACCEPTED_EXTENSIONS = [".pdf", ".docx", ".txt"];
@@ -22,14 +23,6 @@ interface UploadItem {
 function isAcceptedFile(file: File) {
   const name = file.name.toLowerCase();
   return ACCEPTED_EXTENSIONS.some((extension) => name.endsWith(extension));
-}
-
-function createUploadId() {
-  if (typeof globalThis.crypto?.randomUUID === "function") {
-    return globalThis.crypto.randomUUID();
-  }
-
-  return `upload-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
 }
 
 async function uploadFile(file: File): Promise<Document> {
@@ -89,7 +82,7 @@ export function UploadDropzone() {
     if (!files) return;
 
     for (const file of Array.from(files)) {
-      const id = createUploadId();
+      const id = createId();
 
       if (!isAcceptedFile(file)) {
         setUploads((prev) => [

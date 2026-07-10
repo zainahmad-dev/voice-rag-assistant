@@ -8,7 +8,7 @@ import { VoiceOrb } from "@/components/voice/VoiceOrb";
 import { useDocuments } from "@/hooks/useDocuments";
 
 export default function Home() {
-  const { documents, isLoading, error } = useDocuments();
+  const { documents, isLoading, error, deleteDocument } = useDocuments();
   const readyDocumentCount = documents.filter((document) => document.status === "completed").length;
 
   return (
@@ -18,7 +18,12 @@ export default function Home() {
       <div className="flex flex-1 flex-col gap-4 p-6 md:flex-row">
         <aside className="w-full shrink-0 space-y-4 rounded-lg border border-border bg-surface p-4 md:w-80">
           <UploadDropzone />
-          <DocumentLibrary documents={documents} isLoading={isLoading} error={error} />
+          <DocumentLibrary
+            documents={documents}
+            isLoading={isLoading}
+            error={error}
+            deleteDocument={deleteDocument}
+          />
         </aside>
 
         <main className="flex flex-1 flex-col rounded-lg border border-border bg-surface p-6">

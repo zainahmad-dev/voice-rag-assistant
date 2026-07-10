@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 
 import type { Document } from "@/types/document";
 
@@ -14,6 +14,7 @@ interface UseDocumentsResult {
   documents: Document[];
   isLoading: boolean;
   error: string | null;
+  deleteDocument: (id: string) => Promise<void>;
 }
 
 export function useDocuments(): UseDocumentsResult {
@@ -69,5 +70,40 @@ export function useDocuments(): UseDocumentsResult {
     };
   }, [pollCount]);
 
-  return { documents, isLoading, error };
+  // Removes the document from view immediately (optimistic update) rather
+  // than waiting on the DELETE request or the next poll tick. If the request
+  // fails, the document is spliced back into its original position and the
+  // error is rethrown so the caller (the delete button) can show it.
+  const deleteDocument = useCallback(
+    async (id: string) => {
+      const index = documents.findIndex((document) => document.id === id);
+      const removed = documents[index];
+      if (!removed) return;
+
+      setDocuments((docs) => docs.filter((document) => document.id !== id));
+
+      try {
+        const response = await fetch(`/api/documents/${id}`, { method: "DELETE" });
+
+        if (!response.ok) {
+          const body = await response.json().catch(() => null);
+          const message =
+            body && typeof body === "object" && "error" in body
+              ? String((body as { error: unknown }).error)
+              : `Failed to delete document (status ${response.status}).`;
+          throw new Error(message);
+        }
+      } catch (err) {
+        setDocuments((docs) => {
+          const next = [...docs];
+          next.splice(Math.min(index, next.length), 0, removed);
+          return next;
+        });
+        throw err instanceof Error ? err : new Error("Failed to delete document.");
+      }
+    },
+    [documents]
+  );
+
+  return { documents, isLoading, error, deleteDocument };
 }

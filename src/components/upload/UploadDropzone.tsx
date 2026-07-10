@@ -51,6 +51,31 @@ async function uploadFile(file: File): Promise<Document> {
   return body as Document;
 }
 
+/**
+ * Kicks off extraction/chunking/embedding for a freshly uploaded document.
+ * Indexing progress and any processing failure are reflected in the document
+ * library (which polls /api/documents), not here — this only surfaces a
+ * failure to *start* indexing (e.g. the request itself never reached the
+ * server).
+ */
+async function ingestDocument(documentId: string): Promise<void> {
+  const response = await fetch("/api/ingest", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ documentId }),
+  });
+
+  const body = await response.json().catch(() => null);
+
+  if (!response.ok) {
+    const message =
+      body && typeof body === "object" && "error" in body
+        ? String((body as { error: unknown }).error)
+        : `Indexing failed with status ${response.status}.`;
+    throw new Error(message);
+  }
+}
+
 export function UploadDropzone() {
   const [isDragging, setIsDragging] = useState(false);
   const [uploads, setUploads] = useState<UploadItem[]>([]);
@@ -78,6 +103,18 @@ export function UploadDropzone() {
               item.id === id ? { ...item, status: "success", document } : item
             )
           );
+
+          return ingestDocument(document.id).catch((error: unknown) => {
+            const message =
+              error instanceof Error ? error.message : "Failed to start indexing.";
+            setUploads((prev) =>
+              prev.map((item) =>
+                item.id === id
+                  ? { ...item, status: "error", errorMessage: message }
+                  : item
+              )
+            );
+          });
         })
         .catch((error: unknown) => {
           const message =

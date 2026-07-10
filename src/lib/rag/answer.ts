@@ -51,6 +51,18 @@ export async function generateAnswer(
   { matchCount, documentIds }: GenerateAnswerOptions = {}
 ): Promise<GeneratedAnswer> {
   const sources = await searchDocuments(question, { matchCount, documentIds });
+
+  // No documents are ready to search (none uploaded yet, or all still
+  // indexing/failed) — answer directly instead of asking Groq to guess at
+  // the right "nothing to search" phrasing from an empty context block.
+  if (sources.length === 0) {
+    return {
+      answer:
+        "I don't have any indexed documents to search yet. Upload a document and wait for it to finish indexing, then ask again.",
+      sources: [],
+    };
+  }
+
   const context = buildContext(sources);
 
   const completion = await getClient().chat.completions.create({
@@ -59,7 +71,7 @@ export async function generateAnswer(
       { role: "system", content: SYSTEM_PROMPT },
       {
         role: "user",
-        content: `Context:\n${context || "(no matching documents found)"}\n\nQuestion: ${question}`,
+        content: `Context:\n${context}\n\nQuestion: ${question}`,
       },
     ],
   });

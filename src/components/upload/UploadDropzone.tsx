@@ -7,11 +7,14 @@ import type { Document } from "@/types/document";
 
 const ACCEPTED_EXTENSIONS = [".pdf", ".docx", ".txt"];
 const ACCEPT_ATTR = ACCEPTED_EXTENSIONS.join(",");
+// Mirrors MAX_FILE_SIZE_BYTES in src/app/api/upload/route.ts, checked client-side
+// so oversized files are rejected instantly instead of after a full upload round-trip.
+const MAX_FILE_SIZE_BYTES = 15 * 1024 * 1024;
 
 interface UploadItem {
   id: string;
   fileName: string;
-  status: "uploading" | "success" | "error";
+  status: "uploading" | "indexing" | "ready" | "error";
   document?: Document;
   errorMessage?: string;
 }
@@ -53,12 +56,11 @@ async function uploadFile(file: File): Promise<Document> {
 
 /**
  * Kicks off extraction/chunking/embedding for a freshly uploaded document.
- * Indexing progress and any processing failure are reflected in the document
- * library (which polls /api/documents), not here — this only surfaces a
- * failure to *start* indexing (e.g. the request itself never reached the
- * server).
+ * The request stays open for the whole ingest pipeline (see /api/ingest), so
+ * its resolution reflects the real outcome — no separate polling needed to
+ * know when this specific upload has finished indexing.
  */
-async function ingestDocument(documentId: string): Promise<void> {
+async function ingestDocument(documentId: string): Promise<Document> {
   const response = await fetch("/api/ingest", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -74,6 +76,8 @@ async function ingestDocument(documentId: string): Promise<void> {
         : `Indexing failed with status ${response.status}.`;
     throw new Error(message);
   }
+
+  return body as Document;
 }
 
 export function UploadDropzone() {
@@ -85,12 +89,34 @@ export function UploadDropzone() {
     if (!files) return;
 
     for (const file of Array.from(files)) {
+      const id = createUploadId();
+
       if (!isAcceptedFile(file)) {
-        console.warn("Rejected file (unsupported type):", file.name);
+        setUploads((prev) => [
+          ...prev,
+          {
+            id,
+            fileName: file.name,
+            status: "error",
+            errorMessage: "Unsupported file type. Only PDF, DOCX, and TXT files are accepted.",
+          },
+        ]);
         continue;
       }
 
-      const id = createUploadId();
+      if (file.size > MAX_FILE_SIZE_BYTES) {
+        setUploads((prev) => [
+          ...prev,
+          {
+            id,
+            fileName: file.name,
+            status: "error",
+            errorMessage: "File is too large. The maximum file size is 15MB.",
+          },
+        ]);
+        continue;
+      }
+
       setUploads((prev) => [
         ...prev,
         { id, fileName: file.name, status: "uploading" },
@@ -100,21 +126,31 @@ export function UploadDropzone() {
         .then((document) => {
           setUploads((prev) =>
             prev.map((item) =>
-              item.id === id ? { ...item, status: "success", document } : item
+              item.id === id ? { ...item, status: "indexing", document } : item
             )
           );
 
-          return ingestDocument(document.id).catch((error: unknown) => {
-            const message =
-              error instanceof Error ? error.message : "Failed to start indexing.";
-            setUploads((prev) =>
-              prev.map((item) =>
-                item.id === id
-                  ? { ...item, status: "error", errorMessage: message }
-                  : item
-              )
-            );
-          });
+          return ingestDocument(document.id)
+            .then((updatedDocument) => {
+              setUploads((prev) =>
+                prev.map((item) =>
+                  item.id === id
+                    ? { ...item, status: "ready", document: updatedDocument }
+                    : item
+                )
+              );
+            })
+            .catch((error: unknown) => {
+              const message =
+                error instanceof Error ? error.message : "Failed to index this document.";
+              setUploads((prev) =>
+                prev.map((item) =>
+                  item.id === id
+                    ? { ...item, status: "error", errorMessage: message }
+                    : item
+                )
+              );
+            });
         })
         .catch((error: unknown) => {
           const message =
@@ -200,12 +236,17 @@ export function UploadDropzone() {
                   </span>
                 )}
 
-                {item.status === "success" && (
+                {item.status === "indexing" && (
+                  <span className="flex shrink-0 items-center gap-1 text-foreground-muted">
+                    <Loader2 size={12} className="animate-spin" />
+                    Indexing…
+                  </span>
+                )}
+
+                {item.status === "ready" && (
                   <span className="flex shrink-0 items-center gap-1 text-accent">
                     <CircleCheck size={12} />
-                    {item.document?.status === "processing"
-                      ? "Processing"
-                      : "Uploaded"}
+                    Ready
                   </span>
                 )}
 

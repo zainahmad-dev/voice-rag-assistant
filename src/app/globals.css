@@ -130,3 +130,19 @@ body {
     animation-name: orb-pulse-reduced;
   }
 }
+
+/* Install prompt banner entrance */
+@keyframes banner-in {
+  from {
+    transform: translateY(-0.75rem);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+.animate-banner-in {
+  animation: banner-in var(--duration-slow) var(--ease-standard);
+}

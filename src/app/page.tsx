@@ -3,6 +3,7 @@
 import { ConversationHistory } from "@/components/chat/ConversationHistory";
 import { TextQueryInput } from "@/components/chat/TextQueryInput";
 import { DashboardHeader } from "@/components/layout/DashboardHeader";
+import { InstallPrompt } from "@/components/layout/InstallPrompt";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { VoiceOrb } from "@/components/voice/VoiceOrb";
 import { useDocuments } from "@/hooks/useDocuments";
@@ -20,6 +21,8 @@ export default function Home() {
         isSidebarVisible={isSidebarVisible}
         onToggleSidebar={toggle}
       />
+
+      <InstallPrompt />
 
       <div className="relative flex flex-1 overflow-hidden">
         <Sidebar

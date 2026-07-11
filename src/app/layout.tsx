@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Space_Grotesk, Inter, JetBrains_Mono } from "next/font/google";
 import Script from "next/script";
 
+import { ServiceWorkerRegister } from "@/components/layout/ServiceWorkerRegister";
 import { themeInitScript } from "@/components/layout/theme-script";
 import "./globals.css";
 
@@ -45,6 +46,7 @@ export default function RootLayout({
         suppressHydrationWarning
       >
         {children}
+        <ServiceWorkerRegister />
         <Script id="theme-init" strategy="beforeInteractive">
           {themeInitScript}
         </Script>

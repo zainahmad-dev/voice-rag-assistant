@@ -1,6 +1,24 @@
 import type { CreateAssistantDTO } from "@vapi-ai/web/dist/api";
 
-const WEBHOOK_URL = `${process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000"}/api/vapi/webhook`;
+// `??` only falls back on null/undefined, not on "" — if NEXT_PUBLIC_APP_URL
+// is ever set to an empty string (as opposed to unset), it silently produced
+// a host-less "/api/vapi/webhook" instead of falling back, which VAPI's
+// cloud cannot call. Use a truthy check so both "unset" and "empty" fall
+// back the same way, and log loudly if we're shipping the localhost
+// fallback in a production build, since VAPI's servers can never reach it.
+const rawAppUrl = process.env.NEXT_PUBLIC_APP_URL;
+const APP_URL = rawAppUrl && rawAppUrl.trim() ? rawAppUrl : "http://localhost:3000";
+
+if (APP_URL === "http://localhost:3000" && process.env.NODE_ENV === "production") {
+  console.error(
+    "[Vapi] NEXT_PUBLIC_APP_URL is missing or empty in a production build. " +
+      "VAPI's cloud will be told to call http://localhost:3000/api/vapi/webhook, which it cannot reach — " +
+      "voice tool calls will fail with \"Your server rejected tool-calls webhook\". " +
+      "Set NEXT_PUBLIC_APP_URL to this deployment's real public URL and redeploy."
+  );
+}
+
+const WEBHOOK_URL = `${APP_URL}/api/vapi/webhook`;
 
 const SYSTEM_PROMPT = `You are a voice assistant that helps users ask questions about their uploaded documents.
 

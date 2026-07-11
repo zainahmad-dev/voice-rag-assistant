@@ -1,0 +1,37 @@
+Nimbus Cloud Storage — Product Overview
+
+Nimbus Cloud is a secure file storage and backup platform built for small teams and individual professionals who need reliable access to their files from any device. Founded in 2021, Nimbus Cloud now serves over 40,000 customers across 60 countries.
+
+Core Features
+
+Automatic Sync: Files placed in the Nimbus folder sync across all connected devices within seconds. Sync works over both Wi-Fi and cellular connections, with an option to restrict large uploads to Wi-Fi only.
+
+End-to-End Encryption: All files are encrypted with AES-256 before they leave your device and remain encrypted at rest on Nimbus servers. Nimbus staff cannot read the contents of your files.
+
+Version History: Every file keeps up to 180 days of version history on the Business plan (30 days on Starter), so you can restore an earlier version or recover a file that was accidentally deleted.
+
+Shared Folders and Link Sharing: Folders can be shared with teammates with view or edit permissions, and individual files can be shared via a link with an optional password and expiration date.
+
+Offline Access: Mark any file or folder as "Available Offline" to keep a local copy that syncs automatically the next time you're connected.
+
+Plans and Pricing
+
+Starter: 100 GB of storage, single user, 30-day version history. $6/month.
+
+Team: 1 TB of shared storage for up to 10 members, 90-day version history, shared folder permissions. $18/month.
+
+Business: 5 TB of shared storage, unlimited members, 180-day version history, single sign-on (SSO), and priority support. $45/month.
+
+All plans include a 14-day free trial and can be cancelled at any time from the account settings page.
+
+Supported Platforms
+
+Nimbus Cloud runs on Windows, macOS, Linux, iOS, and Android, as well as through any modern web browser at app.nimbuscloud.example. Desktop clients support drag-and-drop uploads and a system tray icon showing sync status.
+
+Security and Compliance
+
+Nimbus Cloud is SOC 2 Type II certified and undergoes an independent security audit twice a year. Two-factor authentication (2FA) is available on all plans and is required by default for Business accounts.
+
+Getting Help
+
+Support is available by email at support@nimbuscloud.example for all plans, with live chat available during business hours for Team and Business plans. Business plan customers also get a dedicated account manager and a guaranteed 4-hour first response time.

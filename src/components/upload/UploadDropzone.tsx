@@ -73,7 +73,12 @@ async function ingestDocument(documentId: string): Promise<Document> {
   return body as Document;
 }
 
-export function UploadDropzone() {
+interface UploadDropzoneProps {
+  /** Icon-only rendering for the collapsed sidebar rail. */
+  collapsed?: boolean;
+}
+
+export function UploadDropzone({ collapsed = false }: UploadDropzoneProps) {
   const [isDragging, setIsDragging] = useState(false);
   const [uploads, setUploads] = useState<UploadItem[]>([]);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -159,6 +164,34 @@ export function UploadDropzone() {
     }
   }
 
+  if (collapsed) {
+    return (
+      <div className="flex justify-center">
+        <button
+          type="button"
+          title="Upload documents (PDF, DOCX, TXT)"
+          aria-label="Upload documents"
+          onClick={() => inputRef.current?.click()}
+          className="flex h-11 w-11 items-center justify-center rounded-full bg-accent text-background transition-all duration-200 hover:scale-105 hover:bg-accent-hover active:scale-95"
+        >
+          <UploadCloud size={20} />
+        </button>
+
+        <input
+          ref={inputRef}
+          type="file"
+          accept={ACCEPT_ATTR}
+          multiple
+          className="hidden"
+          onChange={(event) => {
+            handleFiles(event.target.files);
+            event.target.value = "";
+          }}
+        />
+      </div>
+    );
+  }
+
   return (
     <div className="flex flex-col gap-3">
       <div
@@ -175,9 +208,9 @@ export function UploadDropzone() {
           setIsDragging(false);
           handleFiles(event.dataTransfer.files);
         }}
-        className={`flex flex-col items-center gap-3 rounded-lg border border-dashed px-4 py-8 text-center transition-colors duration-150 ${
+        className={`flex flex-col items-center gap-3 rounded-lg border border-dashed px-4 py-8 text-center transition-all duration-200 ${
           isDragging
-            ? "border-accent bg-accent-subtle"
+            ? "border-accent bg-accent-subtle scale-[1.02]"
             : "border-border bg-surface"
         }`}
       >
@@ -190,7 +223,7 @@ export function UploadDropzone() {
         <button
           type="button"
           onClick={() => inputRef.current?.click()}
-          className="rounded-full bg-accent px-4 py-1.5 text-sm font-medium text-background transition-colors duration-150 hover:bg-accent-hover"
+          className="rounded-full bg-accent px-4 py-1.5 text-sm font-medium text-background transition-all duration-200 hover:bg-accent-hover hover:scale-105 active:scale-95"
         >
           Browse files
         </button>

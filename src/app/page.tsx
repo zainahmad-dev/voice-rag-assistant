@@ -3,31 +3,36 @@
 import { ConversationHistory } from "@/components/chat/ConversationHistory";
 import { TextQueryInput } from "@/components/chat/TextQueryInput";
 import { DashboardHeader } from "@/components/layout/DashboardHeader";
-import { DocumentLibrary } from "@/components/documents/DocumentLibrary";
-import { UploadDropzone } from "@/components/upload/UploadDropzone";
+import { Sidebar } from "@/components/layout/Sidebar";
 import { VoiceOrb } from "@/components/voice/VoiceOrb";
 import { useDocuments } from "@/hooks/useDocuments";
+import { useSidebarState } from "@/hooks/useSidebarState";
 
 export default function Home() {
   const { documents, isLoading, error, deleteDocument } = useDocuments();
   const readyDocumentCount = documents.filter((document) => document.status === "completed").length;
+  const { isCollapsed, isMobileOpen, isSidebarVisible, toggle, closeMobile } = useSidebarState();
 
   return (
-    <div className="flex min-h-full flex-1 flex-col bg-background">
-      <DashboardHeader documentCount={readyDocumentCount} />
+    <div className="flex min-h-full flex-1 flex-col overflow-x-hidden bg-background">
+      <DashboardHeader
+        documentCount={readyDocumentCount}
+        isSidebarVisible={isSidebarVisible}
+        onToggleSidebar={toggle}
+      />
 
-      <div className="flex flex-1 flex-col gap-4 p-6 md:flex-row">
-        <aside className="w-full shrink-0 space-y-4 rounded-lg border border-border bg-surface p-4 md:w-80">
-          <UploadDropzone />
-          <DocumentLibrary
-            documents={documents}
-            isLoading={isLoading}
-            error={error}
-            deleteDocument={deleteDocument}
-          />
-        </aside>
+      <div className="relative flex flex-1 overflow-hidden">
+        <Sidebar
+          documents={documents}
+          isLoading={isLoading}
+          error={error}
+          deleteDocument={deleteDocument}
+          isCollapsed={isCollapsed}
+          isMobileOpen={isMobileOpen}
+          onCloseMobile={closeMobile}
+        />
 
-        <main className="flex flex-1 flex-col rounded-lg border border-border bg-surface p-6">
+        <main className="flex min-w-0 flex-1 flex-col rounded-lg border border-border bg-surface p-4 md:m-6 md:p-6">
           <div className="flex-1 overflow-y-auto">
             <ConversationHistory />
           </div>

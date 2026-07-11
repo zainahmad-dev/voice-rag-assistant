@@ -15,7 +15,7 @@ export default function Home() {
   const { isCollapsed, isMobileOpen, isSidebarVisible, toggle, closeMobile } = useSidebarState();
 
   return (
-    <div className="flex min-h-full flex-1 flex-col overflow-x-hidden bg-background">
+    <div className="flex h-dvh flex-col overflow-hidden bg-background">
       <DashboardHeader
         documentCount={readyDocumentCount}
         isSidebarVisible={isSidebarVisible}
@@ -24,7 +24,7 @@ export default function Home() {
 
       <InstallPrompt />
 
-      <div className="relative flex flex-1 overflow-hidden">
+      <div className="relative flex min-h-0 flex-1 overflow-hidden">
         <Sidebar
           documents={documents}
           isLoading={isLoading}
@@ -35,14 +35,16 @@ export default function Home() {
           onCloseMobile={closeMobile}
         />
 
-        <main className="flex min-w-0 flex-1 flex-col rounded-lg border border-border bg-surface p-4 md:m-6 md:p-6">
-          <div className="flex-1 overflow-y-auto">
+        <main className="flex min-w-0 flex-1 flex-col overflow-hidden rounded-lg border border-border bg-surface md:m-6">
+          <div className="min-h-0 flex-1">
             <ConversationHistory />
           </div>
 
-          <div className="flex flex-col items-center gap-4 pt-6">
-            <VoiceOrb />
-            <TextQueryInput />
+          <div className="shrink-0 border-t border-border bg-surface/95 px-4 py-4 backdrop-blur-sm md:px-6">
+            <div className="flex flex-col items-center gap-3">
+              <VoiceOrb />
+              <TextQueryInput />
+            </div>
           </div>
         </main>
       </div>

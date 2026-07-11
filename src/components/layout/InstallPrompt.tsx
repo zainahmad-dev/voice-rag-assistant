@@ -87,7 +87,7 @@ export function InstallPrompt() {
   if (!eligible || (!deferredEvent && !showIosHint)) return null;
 
   return (
-    <div className="flex justify-center border-b border-border bg-background px-4 py-3">
+    <div className="flex shrink-0 justify-center border-b border-border bg-background px-4 py-3">
       <div className="animate-banner-in flex w-full max-w-md items-center gap-3 rounded-lg border border-border bg-surface p-4 shadow-lg">
         <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-accent text-background">
           <Download size={18} />

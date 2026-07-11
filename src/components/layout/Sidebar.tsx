@@ -64,7 +64,12 @@ export function Sidebar({
           <UploadDropzone collapsed={isCollapsed} />
         </div>
 
-        <div className={cn("min-h-0 flex-1 overflow-y-auto", isCollapsed ? "p-3" : "p-4")}>
+        <div
+          className={cn(
+            "scrollbar-thin min-h-0 flex-1 overflow-y-auto",
+            isCollapsed ? "p-3" : "p-4"
+          )}
+        >
           <DocumentLibrary
             documents={documents}
             isLoading={isLoading}

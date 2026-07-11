@@ -146,3 +146,103 @@ body {
 .animate-banner-in {
   animation: banner-in var(--duration-slow) var(--ease-standard);
 }
+
+/* Thin, minimal scrollbar that only shows on hover — used for the
+   conversation area and the sidebar document list. */
+.scrollbar-thin {
+  scrollbar-width: thin;
+  scrollbar-color: transparent transparent;
+}
+
+.scrollbar-thin:hover {
+  scrollbar-color: var(--border) transparent;
+}
+
+.scrollbar-thin::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+.scrollbar-thin::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.scrollbar-thin::-webkit-scrollbar-thumb {
+  background-color: transparent;
+  border-radius: var(--radius-full);
+}
+
+.scrollbar-thin:hover::-webkit-scrollbar-thumb {
+  background-color: var(--border);
+}
+
+/* Message bubble entrance */
+@keyframes message-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-message-in {
+  animation: message-in var(--duration-base) var(--ease-standard) both;
+}
+
+/* Source citation card entrance */
+@keyframes source-card-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-source-card-in {
+  animation: source-card-in var(--duration-base) var(--ease-standard) both;
+}
+
+/* Idle mic — slow breathing glow */
+@keyframes orb-idle-glow {
+  0%,
+  100% {
+    opacity: 0.35;
+  }
+  50% {
+    opacity: 0.7;
+  }
+}
+
+.orb-idle-glow {
+  animation: orb-idle-glow 3s ease-in-out infinite;
+}
+
+/* Speaking mic — animated waveform bars */
+@keyframes orb-wave-bar {
+  0%,
+  100% {
+    transform: scaleY(0.3);
+  }
+  50% {
+    transform: scaleY(1);
+  }
+}
+
+.orb-wave-bar {
+  animation: orb-wave-bar 0.9s ease-in-out infinite;
+  transform-origin: bottom;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .orb-idle-glow,
+  .orb-wave-bar {
+    animation: none;
+    opacity: 0.5;
+  }
+}

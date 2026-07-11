@@ -69,21 +69,21 @@ export function TextQueryInput() {
   }
 
   return (
-    <form onSubmit={handleSubmit} className="flex w-full max-w-md flex-col gap-1.5">
-      <div className="flex items-center gap-2">
+    <form onSubmit={handleSubmit} className="flex w-full max-w-2xl flex-col gap-1.5">
+      <div className="flex items-center gap-2 rounded-2xl border border-border bg-surface-raised px-2 py-1.5 shadow-sm transition-all duration-200 focus-within:border-accent/50 focus-within:shadow-md">
         <input
           type="text"
           value={value}
           onChange={(event) => setValue(event.target.value)}
           placeholder="Type a question to test the assistant…"
           disabled={isSending}
-          className="flex-1 rounded-full border border-border bg-surface px-4 py-2 text-sm text-foreground placeholder:text-foreground-muted focus:outline-none focus:ring-2 focus:ring-accent disabled:opacity-50"
+          className="flex-1 bg-transparent px-3 py-2 text-[15px] text-foreground placeholder:text-foreground-muted focus:outline-none disabled:opacity-50"
         />
         <button
           type="submit"
           disabled={isSending || !value.trim()}
           aria-label="Send test question"
-          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-accent text-background transition-colors duration-150 hover:bg-accent-hover disabled:opacity-50"
+          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-accent text-background transition-all duration-200 hover:scale-105 hover:bg-accent-hover disabled:pointer-events-none disabled:opacity-40"
         >
           {isSending ? <Loader2 size={16} className="animate-spin" /> : <Send size={16} />}
         </button>

@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Offline — Voice RAG Assistant</title>
+<style>
+  :root { color-scheme: light dark; }
+  body {
+    margin: 0;
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Inter, sans-serif;
+    background: #faf6ee;
+    color: #16211f;
+  }
+  .card {
+    max-width: 360px;
+    width: 100%;
+    text-align: center;
+    background: #ffffff;
+    border: 1px solid #e6dfd0;
+    border-radius: 20px;
+    padding: 32px 28px;
+    box-sizing: border-box;
+  }
+  .badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 48px;
+    height: 48px;
+    border-radius: 9999px;
+    background: #deeae9;
+    color: #0e3b3c;
+    font-size: 22px;
+    margin-bottom: 16px;
+  }
+  h1 {
+    font-size: 18px;
+    margin: 0 0 8px;
+  }
+  p {
+    font-size: 14px;
+    line-height: 1.5;
+    color: inherit;
+    opacity: 0.75;
+    margin: 0;
+  }
+  @media (prefers-color-scheme: dark) {
+    body { background: #0d1817; color: #f3eee2; }
+    .card { background: #132422; border-color: #243936; }
+    .badge { background: #1d3634; color: #4fb8b4; }
+  }
+</style>
+</head>
+<body>
+  <div class="card">
+    <div class="badge">&#9888;</div>
+    <h1>You're offline</h1>
+    <p>
+      Voice RAG Assistant needs a connection to load, search, and answer
+      questions about your documents. Reconnect and try again.
+    </p>
+  </div>
+</body>
+</html>

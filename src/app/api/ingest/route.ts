@@ -33,6 +33,8 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "documentId is required." }, { status: 400 });
   }
 
+  console.log(`INGEST START: documentId=${documentId}`);
+
   const supabase = getSupabaseServiceClient();
 
   const { data: document, error: fetchError } = await supabase
@@ -42,6 +44,7 @@ export async function POST(request: Request) {
     .single<Document>();
 
   if (fetchError || !document) {
+    console.error(`INGEST FAILED: document lookup (documentId=${documentId}):`, fetchError);
     return NextResponse.json({ error: "Document not found." }, { status: 404 });
   }
 
@@ -56,9 +59,11 @@ export async function POST(request: Request) {
       .download(document.storage_path);
 
     if (downloadError || !file) {
-      console.error("Failed to download file from storage:", downloadError);
+      console.error(`INGEST FAILED: storage download (documentId=${documentId}):`, downloadError);
       throw new Error("We couldn't retrieve the uploaded file. Please try uploading it again.");
     }
+
+    console.log(`DOWNLOAD SUCCESS: documentId=${documentId}`);
 
     const buffer = Buffer.from(await file.arrayBuffer());
     const text = await withStage(
@@ -67,6 +72,8 @@ export async function POST(request: Request) {
       () => extractText(buffer, document.file_type)
     );
     const chunks = chunkText(text);
+
+    console.log(`TEXT EXTRACTION SUCCESS: documentId=${documentId} chunks=${chunks.length}`);
 
     if (chunks.length === 0) {
       throw new Error(
@@ -79,6 +86,8 @@ export async function POST(request: Request) {
       "We couldn't process this document's content right now. Please try again in a few minutes.",
       () => embedChunks(chunks)
     );
+
+    console.log(`EMBEDDING SUCCESS: documentId=${documentId} embeddings=${embeddings.length}`);
 
     // Clear out any chunks from a previous attempt so retries don't duplicate rows.
     await supabase.from("document_chunks").delete().eq("document_id", documentId);
@@ -94,10 +103,12 @@ export async function POST(request: Request) {
       const batch = rows.slice(i, i + INSERT_BATCH_SIZE);
       const { error: insertError } = await supabase.from("document_chunks").insert(batch);
       if (insertError) {
-        console.error("Failed to insert document chunks:", insertError);
+        console.error(`INGEST FAILED: chunk insert (documentId=${documentId}):`, insertError);
         throw new Error("Something went wrong saving this document's content. Please try again.");
       }
     }
+
+    console.log(`CHUNKS INSERTED: documentId=${documentId} count=${rows.length}`);
 
     const { data: updated, error: updateError } = await supabase
       .from("documents")
@@ -107,9 +118,11 @@ export async function POST(request: Request) {
       .single<Document>();
 
     if (updateError || !updated) {
-      console.error("Failed to finalize document status:", updateError);
+      console.error(`INGEST FAILED: finalize status (documentId=${documentId}):`, updateError);
       throw new Error("Something went wrong finishing up this document. Please try again.");
     }
+
+    console.log(`INGEST COMPLETE: documentId=${documentId}`);
 
     return NextResponse.json(updated);
   } catch (error) {
@@ -117,6 +130,8 @@ export async function POST(request: Request) {
       error instanceof Error
         ? error.message
         : "Something went wrong while processing this document. Please try again.";
+
+    console.error(`INGEST FAILED: documentId=${documentId}:`, message);
 
     await supabase
       .from("documents")

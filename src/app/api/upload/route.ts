@@ -20,26 +20,41 @@ function resolveFileType(fileName: string): SupportedFileType | null {
   return FILE_TYPE_BY_EXTENSION[extension] ?? null;
 }
 
+/**
+ * Issues a signed Supabase Storage upload URL instead of accepting the file
+ * body directly. Vercel Functions hard-cap request bodies at 4.5MB, well
+ * under this app's 15MB file limit, so the browser must upload bytes
+ * straight to Supabase Storage — this route only creates the document
+ * record and hands back a one-time upload token for that direct upload.
+ */
 export async function POST(request: Request) {
-  const formData = await request.formData();
-  const file = formData.get("file");
+  console.log("UPLOAD START");
 
-  if (!(file instanceof File)) {
+  const body = await request.json().catch(() => null);
+  const fileName = body && typeof body === "object" ? (body as { fileName?: unknown }).fileName : null;
+  const fileSize = body && typeof body === "object" ? (body as { fileSize?: unknown }).fileSize : null;
+
+  if (typeof fileName !== "string" || !fileName || typeof fileSize !== "number") {
+    console.error("UPLOAD FAILED: missing fileName/fileSize in request body");
     return NextResponse.json(
-      { error: "No file was provided. Send it as multipart/form-data under the 'file' field." },
+      { error: "fileName and fileSize are required." },
       { status: 400 }
     );
   }
 
-  const fileType = resolveFileType(file.name);
+  console.log(`FILE METADATA RECEIVED: name=${fileName} size=${fileSize}`);
+
+  const fileType = resolveFileType(fileName);
   if (!fileType) {
+    console.error(`UPLOAD FAILED: unsupported file type for ${fileName}`);
     return NextResponse.json(
       { error: "Unsupported file type. Only PDF, DOCX, and TXT files are allowed." },
       { status: 400 }
     );
   }
 
-  if (file.size > MAX_FILE_SIZE_BYTES) {
+  if (fileSize > MAX_FILE_SIZE_BYTES) {
+    console.error(`UPLOAD FAILED: file too large (${fileSize} bytes)`);
     return NextResponse.json(
       { error: "File is too large. The maximum file size is 15MB." },
       { status: 413 }
@@ -48,36 +63,36 @@ export async function POST(request: Request) {
 
   const supabase = getSupabaseServiceClient();
   const documentId = randomUUID();
-  const storagePath = `${documentId}/${file.name}`;
+  const storagePath = `${documentId}/${fileName}`;
 
-  const { error: uploadError } = await supabase.storage
+  const { data: signedUpload, error: signError } = await supabase.storage
     .from(STORAGE_BUCKET)
-    .upload(storagePath, file, {
-      contentType: file.type || undefined,
-      upsert: false,
-    });
+    .createSignedUploadUrl(storagePath);
 
-  if (uploadError) {
+  if (signError || !signedUpload) {
+    console.error(`UPLOAD FAILED: signed URL creation (documentId=${documentId}):`, signError);
     return NextResponse.json(
-      { error: `Failed to upload file to storage: ${uploadError.message}` },
+      { error: `Failed to prepare upload: ${signError?.message ?? "unknown error"}` },
       { status: 500 }
     );
   }
+
+  console.log(`SIGNED URL ISSUED: documentId=${documentId} path=${storagePath}`);
 
   const { data: document, error: insertError } = await supabase
     .from("documents")
     .insert({
       id: documentId,
-      file_name: file.name,
+      file_name: fileName,
       file_type: fileType,
       storage_path: storagePath,
-      status: "processing",
+      status: "pending",
     })
     .select()
     .single<Document>();
 
   if (insertError || !document) {
-    await supabase.storage.from(STORAGE_BUCKET).remove([storagePath]);
+    console.error(`UPLOAD FAILED: database insert (documentId=${documentId}):`, insertError);
     return NextResponse.json(
       {
         error: `Failed to create document record: ${insertError?.message ?? "unknown error"}`,
@@ -86,5 +101,15 @@ export async function POST(request: Request) {
     );
   }
 
-  return NextResponse.json(document, { status: 201 });
+  console.log(`DATABASE INSERT SUCCESS: documentId=${documentId}`);
+
+  return NextResponse.json(
+    {
+      document,
+      signedUrl: signedUpload.signedUrl,
+      token: signedUpload.token,
+      path: signedUpload.path,
+    },
+    { status: 201 }
+  );
 }

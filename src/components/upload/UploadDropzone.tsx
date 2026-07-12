@@ -4,8 +4,10 @@ import { CircleCheck, CircleX, Loader2, UploadCloud } from "lucide-react";
 import { useRef, useState } from "react";
 
 import { createId } from "@/lib/createId";
+import { getSupabaseBrowserClient } from "@/lib/supabase/client";
 import type { Document } from "@/types/document";
 
+const STORAGE_BUCKET = "documents";
 const ACCEPTED_EXTENSIONS = [".pdf", ".docx", ".txt"];
 const ACCEPT_ATTR = ACCEPTED_EXTENSIONS.join(",");
 // Mirrors MAX_FILE_SIZE_BYTES in src/app/api/upload/route.ts, checked client-side
@@ -25,26 +27,46 @@ function isAcceptedFile(file: File) {
   return ACCEPTED_EXTENSIONS.some((extension) => name.endsWith(extension));
 }
 
+/**
+ * Vercel Functions cap request bodies at 4.5MB — well under this app's 15MB
+ * limit — so the file itself never goes through /api/upload. That route only
+ * creates the document record and mints a signed Supabase Storage upload
+ * URL; the browser then PUTs the bytes straight to Storage.
+ */
 async function uploadFile(file: File): Promise<Document> {
-  const formData = new FormData();
-  formData.append("file", file);
-
-  const response = await fetch("/api/upload", {
+  const prepareResponse = await fetch("/api/upload", {
     method: "POST",
-    body: formData,
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ fileName: file.name, fileSize: file.size }),
   });
 
-  const body = await response.json().catch(() => null);
+  const prepareBody = await prepareResponse.json().catch(() => null);
 
-  if (!response.ok) {
+  if (!prepareResponse.ok) {
     const message =
-      body && typeof body === "object" && "error" in body
-        ? String((body as { error: unknown }).error)
-        : `Upload failed with status ${response.status}.`;
+      prepareBody && typeof prepareBody === "object" && "error" in prepareBody
+        ? String((prepareBody as { error: unknown }).error)
+        : `Upload failed with status ${prepareResponse.status}.`;
     throw new Error(message);
   }
 
-  return body as Document;
+  const { document, path, token } = prepareBody as {
+    document: Document;
+    path: string;
+    token: string;
+  };
+
+  const { error: storageError } = await getSupabaseBrowserClient()
+    .storage.from(STORAGE_BUCKET)
+    .uploadToSignedUrl(path, token, file, {
+      contentType: file.type || undefined,
+    });
+
+  if (storageError) {
+    throw new Error(`Failed to upload file to storage: ${storageError.message}`);
+  }
+
+  return document;
 }
 
 /**

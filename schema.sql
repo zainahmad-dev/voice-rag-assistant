@@ -27,13 +27,17 @@ create table if not exists document_chunks (
   created_at timestamptz not null default now()
 );
 
--- 4. IVFFlat index for fast approximate cosine-similarity search over embeddings.
--- `lists = 100` is a reasonable default for small-to-medium corpora; re-tune (roughly
--- sqrt(row_count)) and REINDEX once you have a real volume of chunks.
-create index if not exists document_chunks_embedding_idx
-  on document_chunks
-  using ivfflat (embedding vector_cosine_ops)
-  with (lists = 100);
+-- 4. No ANN index on `embedding` for now — an IVFFlat/HNSW index only pays off once
+-- there's enough data for approximate search to matter (IVFFlat needs roughly
+-- sqrt(row_count) lists to have any accuracy; with the small chunk counts this app
+-- starts with, an oversized `lists` setting makes the index return WORSE matches
+-- than a plain sequential scan, silently dropping the correct document from
+-- results). match_documents() below just does `order by embedding <=> query_embedding`
+-- with no index, which Postgres executes as an exact sequential scan — correct, and
+-- fast enough for tens of thousands of rows. Only add an ivfflat/hnsw index (and
+-- re-tune `lists` to roughly sqrt(row_count)) once the corpus is large enough that
+-- sequential scan is measurably slow.
+drop index if exists document_chunks_embedding_idx;
 
 create index if not exists document_chunks_document_id_idx
   on document_chunks (document_id);

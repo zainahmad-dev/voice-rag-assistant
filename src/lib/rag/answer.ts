@@ -50,12 +50,22 @@ export async function generateAnswer(
   question: string,
   { matchCount, documentIds }: GenerateAnswerOptions = {}
 ): Promise<GeneratedAnswer> {
+  console.log(`[RAG] answer: question=${JSON.stringify(question.slice(0, 80))}`);
   const sources = await searchDocuments(question, { matchCount, documentIds });
 
   // No documents are ready to search (none uploaded yet, or all still
   // indexing/failed) — answer directly instead of asking Groq to guess at
   // the right "nothing to search" phrasing from an empty context block.
+  //
+  // NOTE: reaching this branch when documents ARE indexed means vector search
+  // returned nothing (see the warning searchDocuments logs). That is the
+  // "I don't have any indexed documents" symptom — distinct from the LLM
+  // replying "the documents don't cover that", which happens below when we DID
+  // retrieve sources but they didn't actually answer the question.
   if (sources.length === 0) {
+    console.warn(
+      "[RAG] answer: 0 sources retrieved — returning the 'no indexed documents' fallback"
+    );
     return {
       answer:
         "I don't have any indexed documents to search yet. Upload a document and wait for it to finish indexing, then ask again.",
@@ -64,7 +74,9 @@ export async function generateAnswer(
   }
 
   const context = buildContext(sources);
+  console.log(`[RAG] context: sources=${sources.length} chars=${context.length}`);
 
+  const llmStart = Date.now();
   const completion = await getClient().chat.completions.create({
     model: CHAT_MODEL,
     messages: [
@@ -78,8 +90,10 @@ export async function generateAnswer(
 
   const answer = completion.choices[0]?.message?.content?.trim();
   if (!answer) {
+    console.error("[RAG] LLM returned empty answer content");
     throw new Error("Groq returned no answer content.");
   }
 
+  console.log(`[RAG] answer generated: chars=${answer.length} in ${Date.now() - llmStart}ms`);
   return { answer, sources };
 }
